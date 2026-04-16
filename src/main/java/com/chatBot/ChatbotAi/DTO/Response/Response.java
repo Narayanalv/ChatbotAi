@@ -8,6 +8,10 @@ import lombok.Setter;
 public class Response {
     private String message = "success";
     private Integer status = 200;
-    public Response() {}
-    public Response(String message, Integer status) {}
+    public Response() {
+    }
+    public Response(String message, Integer status) {
+        this.message = message;
+        this.status = status;
+    }
 }
