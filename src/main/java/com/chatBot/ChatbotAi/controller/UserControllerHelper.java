@@ -96,8 +96,9 @@ public class UserControllerHelper {
         otp.setEmail(user.getEmail());
         otp.setOtp(Integer.parseInt(generateOtp(6)));
         otp.setUser(user);
+        System.out.println(otp.getOtp());
         otp = otpService.saveOtp(otp);
-        userService.updateOtpId(otp.getId(), user.getId());
+        userService.updateOtpId(user.getId(), otp.getId());
         return true;
     }
 
@@ -116,8 +117,17 @@ public class UserControllerHelper {
     protected LoginResponse validateVerifyOTP(VerifyOTPRequest verifyOTPRequest) {
         LoginResponse response = new LoginResponse();
         int otp = verifyOTPRequest.getOtp();
+        if (String.valueOf(otp).length() != 6) {
+            return new LoginResponse(ERROR_CODE, "User not found");
+        }
         String email = verifyOTPRequest.getEmail();
         Optional<User> user = userService.findUserByEmail(email);
+        if (user.isEmpty()) {
+            return new LoginResponse(ERROR_CODE, "User not found");
+        } else if (user.get().getOtpId() == null) {
+            return new LoginResponse(ERROR_CODE, "OTP not generated");
+        }
+
         Optional<Otp> otpData = otpService.findOtpByid(user.get().getOtpId());
         if (otpData.filter(otpInfo -> !otpInfo.isExpired()).isPresent()) {
             response.setStatus(ERROR_CODE);
@@ -125,7 +135,7 @@ public class UserControllerHelper {
         } else if (user.get().isVerified()) {
             response.setStatus(ERROR_CODE);
             response.setMessage("OTP is already verified");
-        } else if (otpData.get().getStatus() != Otp.Status.PENDING) {
+        } else if (otpData.get().getStatus() != Otp.StatusEnum.PENDING) {
             response.setStatus(ERROR_CODE);
             response.setMessage("OTP has been " + otpData.get().getStatus());
         } else if (otp == otpData.get().getOtp()) {

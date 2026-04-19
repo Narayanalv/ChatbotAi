@@ -21,7 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Transactional
     @Query("UPDATE User u SET u.otpId = :otpId WHERE u.id = :id")
-    public void updateOtpId(@Param("otpId") Long otpId, @Param("id") Long id);
+    public void updateOtpId(@Param("id") Long id, @Param("otpId") Long otpId);
 
     @Modifying
     @Transactional

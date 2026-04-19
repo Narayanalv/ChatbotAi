@@ -28,7 +28,8 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(sessionKey)
                 .issuedAt(new Date())
-//                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))  // ← add this
+                .claim("app", "chatbot-ai")
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key())
                 .compact();
     }

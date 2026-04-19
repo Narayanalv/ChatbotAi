@@ -8,7 +8,12 @@ import lombok.Setter;
 public class LoginResponse extends Response {
     private String accessToken;
 
-    public LoginResponse() {
+    public LoginResponse() {}
+
+    public LoginResponse(int status, String message) {
+        super();
+        this.setStatus(status);
+        this.setMessage(message);
     }
 
     public LoginResponse(String accessToken) {

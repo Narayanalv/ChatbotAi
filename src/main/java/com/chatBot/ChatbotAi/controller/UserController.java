@@ -56,7 +56,9 @@ public class UserController extends UserControllerHelper {
                 response.setMessage("Something went wrong " + e.getMessage());
             }
         }
-        return ResponseEntity.ok(response);
+        return ResponseEntity
+                .status(response.getStatus())
+                .body(response);
     }
 
     @PostMapping("/verifyOTP")
@@ -66,16 +68,19 @@ public class UserController extends UserControllerHelper {
         Optional<User> user = null;
         if (response.getStatus() == SUCCESS_CODE) {
             user = userService.findUserByEmail(email);
-            Optional<Otp> otp = otpService.findOtpByid(user.get().getOtpId());
-            otp.ifPresent(otpData -> {
-                otpData.setStatus(Otp.Status.VERIFIED);
-            });
-            otpService.saveOtp(otp.get());
-            user.get().setVerified(true);
-            userService.updateUser(user.get());
-            response.setAccessToken(this.generateAccessToken(user.get()));
+            Optional<Otp> otpData = otpService.findOtpByid(user.get().getOtpId());
+            if (otpData.isPresent()) {
+                int updated = otpService.updateStatus(otpData.get().getId(), otpData.get().getStatus(), Otp.StatusEnum.VERIFIED);
+                if (updated == 1) {
+                    user.get().setVerified(true);
+                    userService.updateUser(user.get());
+                    response.setAccessToken(this.generateAccessToken(user.get()));
+                }
+            }
         }
-        return ResponseEntity.ok(response);
+        return ResponseEntity
+                .status(response.getStatus())
+                .body(response);
     }
 
     @PostMapping("/login")
@@ -127,7 +132,9 @@ public class UserController extends UserControllerHelper {
             String fileName = Path.of(imageName.getPath()).getFileName().toString();
             ChatBot chatBot = chatBotService.createChat(user.getId(), request.getTitle(), request.getTopic(), fileName);
         }
-        return ResponseEntity.ok(response);
+        return ResponseEntity
+                .status(response.getStatus())
+                .body(response);
     }
 
     @GetMapping("/createApiKey/{id}")
@@ -166,6 +173,8 @@ public class UserController extends UserControllerHelper {
         } else {
             listBotResponse = new ListBotResponse(false);
         }
-        return ResponseEntity.ok(listBotResponse);
+        return ResponseEntity
+                .status(listBotResponse.getStatus())
+                .body(listBotResponse);
     }
 }

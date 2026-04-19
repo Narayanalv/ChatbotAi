@@ -31,9 +31,9 @@ public class Otp {
     private User user;
     private String email;
     @Enumerated(EnumType.STRING)
-    private Status status = Status.PENDING;
+    private StatusEnum status = StatusEnum.PENDING;
 
-    public enum Status {
+    public static enum StatusEnum {
         PENDING, VERIFIED, EXPIRED, FAILED
     }
 

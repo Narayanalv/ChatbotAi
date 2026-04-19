@@ -33,11 +33,11 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void updateOtpId(Long otpId, Long userId) {
-        userRepository.updateOtpId(userId,otpId);
+    public void updateOtpId(Long userId, Long otpId) {
+        userRepository.updateOtpId(userId, otpId);
     }
 
-    public void updateToken(Long userId,String token) {
+    public void updateToken(Long userId, String token) {
         userRepository.updateToken(userId, token);
     }
 
