@@ -51,8 +51,17 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e.getMessage());
-            throw new AuthenticationServiceException("Unauthorized");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("""
+                    {
+                      "status":401,
+                      "message":"Unauthorized"
+                    }
+                    """);
+            System.out.println(e.getMessage());
+            return;
+
         }
         filterChain.doFilter(request, response);
     }

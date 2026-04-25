@@ -1,11 +1,8 @@
 package com.chatBot.ChatbotAi.controller;
 
 import com.chatBot.ChatbotAi.DTO.Request.AddChatBotRequest;
-import com.chatBot.ChatbotAi.DTO.Response.ListBot;
-import com.chatBot.ChatbotAi.DTO.Response.ListBotResponse;
-import com.chatBot.ChatbotAi.DTO.Response.LoginResponse;
+import com.chatBot.ChatbotAi.DTO.Response.*;
 import com.chatBot.ChatbotAi.DTO.Request.VerifyOTPRequest;
-import com.chatBot.ChatbotAi.DTO.Response.Response;
 import com.chatBot.ChatbotAi.DTO.Request.LoginRequest;
 import com.chatBot.ChatbotAi.DTO.Request.RegisterRequest;
 import com.chatBot.ChatbotAi.models.*;
@@ -26,8 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 @RestController
 @RequestMapping("/api")
@@ -49,7 +48,7 @@ public class UserController extends UserControllerHelper {
                 User user = userService.registerUser(registerRequest);
                 System.out.println(user);
                 if (!this.sendOTP(user)) {
-                    throw new UsernameNotFoundException("Username not found: " + registerRequest.getEmail());
+                    throw new UsernameNotFoundException("Username not found");
                 }
             } catch (Exception e) {
                 response.setStatus(ERROR_CODE);
@@ -144,20 +143,42 @@ public class UserController extends UserControllerHelper {
         apiKey.setUserId(user.getId());
         apiKey.setApiKey();
         apiKeyRepository.save(apiKey);
-        return ResponseEntity.ok(new Response());
+        return ResponseEntity.ok(new Response("created api key successfully", SUCCESS_CODE));
     }
 
     @GetMapping("/getApiKey/{id}")
-    public ResponseEntity<Response> getApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long ApiId) {
+    public ResponseEntity<ApiKeyResponse> getApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long apiId) {
+        Optional<List<ApiKey>> apiKeyList = apiKeyRepository.getVisibleApikey(apiId, true);
+        ApiKeyResponse response = new ApiKeyResponse();
+        List<ApiKeyList> listApiKey = new ArrayList<>();
+        if (apiKeyList.isPresent()) {
+            for (ApiKey apiKey : apiKeyList.get()) {
+                listApiKey.add(new ApiKeyList(apiKey));
+            }
+        }
+        response.setApiKeyList(listApiKey);
+        return ResponseEntity
+                .status(response.getStatus())
+                .body(response);
+    }
+
+    @GetMapping("/activateKey/{id}/{status}")
+    public ResponseEntity<Response> activateApiKey(@AuthenticationPrincipal User user,
+                                                   @PathVariable("id") Long apiKeyId,
+                                                   @PathVariable("status") boolean status) {
         Response response = new Response();
-        Optional<ApiKey> apiKey = apiKeyRepository.findById(ApiId);
-        if (apiKey.isPresent()) {
-            response.setMessage(apiKey.get().getApiKey());
+        int apiUpdate = apiKeyRepository.updateApiKeyStatus(apiKeyId, status, !status);
+        if (apiUpdate >= 1) {
+            return ResponseEntity
+                    .status(response.getStatus())
+                    .body(response);
         } else {
             response.setStatus(ERROR_CODE);
-            response.setMessage("ApiKey not found");
+            response.setMessage("failed to activate api key");
+            return ResponseEntity
+                    .status(response.getStatus())
+                    .body(response);
         }
-        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/getBots")
@@ -176,5 +197,33 @@ public class UserController extends UserControllerHelper {
         return ResponseEntity
                 .status(listBotResponse.getStatus())
                 .body(listBotResponse);
+    }
+
+    @GetMapping("/getKey/{id}")
+    public ResponseEntity<GetApiKeyResponse> getKey(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
+        Optional<ApiKey> key = apiKeyRepository.findById(id);
+        GetApiKeyResponse getApiKeyResponse = new GetApiKeyResponse();
+        if (key.isPresent()) {
+            getApiKeyResponse.setApiKey(key.get().getApiKey());
+            return ResponseEntity
+                    .ok(getApiKeyResponse);
+        } else {
+            getApiKeyResponse.setApiKey(null);
+            return ResponseEntity
+                    .status(ERROR_CODE)
+                    .body(getApiKeyResponse);
+        }
+    }
+
+    @GetMapping("/deleteApiKey/{id}")
+    public ResponseEntity<Response> deleteApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
+        int deleted = apiKeyRepository.updateVisible(id, false);
+        if (deleted >= 1) {
+            return ResponseEntity.ok(new Response("deleted api key successfully", SUCCESS_CODE));
+        } else {
+            return ResponseEntity
+                    .status(ERROR_CODE)
+                    .body(new Response("Failed to delete", ERROR_CODE));
+        }
     }
 }

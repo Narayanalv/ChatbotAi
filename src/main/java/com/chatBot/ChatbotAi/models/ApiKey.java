@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
+
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Date;
@@ -26,6 +27,8 @@ public class ApiKey {
     @Column(unique = true)
     private String apiKey;
     private boolean active;
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean visible = true;
     private LocalDate createdDate = LocalDate.now();
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
@@ -37,11 +40,11 @@ public class ApiKey {
 
     }
 
-    public void setApiKey()
-    {
-        this.apiKey = generateApiKey();
+    public void setApiKey() {
+        this.apiKey = "chatbot_sk_" + generateApiKey().replace("-", "");
     }
-    public String generateApiKey(){
+
+    public String generateApiKey() {
         return UUID.randomUUID().toString();
     }
 }

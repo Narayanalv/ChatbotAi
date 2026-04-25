@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/api/register", "/api/login", "/api/verifyOTP", "/api/resendOTP", "/api/chat/test")
+                        .requestMatchers("/api/register", "/api/login", "/api/verifyOTP", "/api/resendOTP", "/test")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
