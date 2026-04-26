@@ -16,7 +16,7 @@ public interface RagChunkRepository extends JpaRepository<RagChunk, Integer> {
     @Query(value = """
             SELECT * FROM rag_chunk
             WHERE chat_bot_id = :chatBotId
-            ORDER BY embedding <-> CAST(:embedding AS vector)
+            ORDER BY embedding <=> CAST(:embedding AS vector)
             LIMIT :topK
             """, nativeQuery = true)
     List<RagChunk> findSimilarChunks(

@@ -3,7 +3,6 @@ package com.chatBot.ChatbotAi.service;
 import com.chatBot.ChatbotAi.models.RagChunk;
 import com.chatBot.ChatbotAi.repository.RagChunkRepository;
 import com.google.gson.Gson;
-import com.pgvector.PGvector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -29,7 +28,7 @@ public class RagChunkService {
         ragChunk.setChunkIndex(0);
         ragChunk.setUserId(userId);
         ragChunk.setChatBotId(chatBotId);
-        PGvector vector = new PGvector(embeddingModel.embed(data));
+        float[] vector = embeddingModel.embed(data);
         ragChunk.setEmbedding(vector);
         ragChunkRepository.save(ragChunk);
 //        Timestamp timestamp = new Timestamp(System.currentTimeMillis());

@@ -2,7 +2,6 @@ package com.chatBot.ChatbotAi.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.pgvector.PGvector;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,11 +29,14 @@ public class RagChunk {
     private String textChunk;
     @Column(nullable = false)
     private Integer chunkIndex;
-//    @Transient
+    //    @Transient
+//    @JdbcTypeCode(SqlTypes.VECTOR)
+//    @Array(length = 1024)
+//    @Column(name = "embedding")
     @JdbcTypeCode(SqlTypes.VECTOR)
     @Array(length = 1024)
     @Column(name = "embedding")
-    private PGvector embedding;
+    private float[] embedding;
     private LocalDate CreatedDate = LocalDate.now();
     @CreationTimestamp
     @Column(updatable = false, nullable = false)

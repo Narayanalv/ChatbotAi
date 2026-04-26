@@ -63,7 +63,7 @@ public class ChatServiceController {
             }
             System.out.println(context.toString());
         }
-        String chat = chatService.chatWithContext(context.toString(), message.toString());
+        String chat = chatService.chatWithContext(chatBot.get().getTopic(),context.toString(), message.toString());
         response.setStatus(200);
         response.setMessage("success");
         response.setMessageText(chat);
@@ -84,7 +84,7 @@ public class ChatServiceController {
         ChatResponse chatResponse = new ChatResponse();
         chatResponse.setMessage(chat);
         System.out.println(chat);
-        System.out.println(chatService.chatWithContext("test", chat));
+        System.out.println(chatService.chatWithContext("","test", chat));
         return ResponseEntity.ok(chatResponse);
     }
 
@@ -121,8 +121,8 @@ public class ChatServiceController {
             }
             System.out.println(context.toString());
         }
-        String chat = chatService.chatWithContext(context.toString(), message.toString());
-        chatResponse.setMessage(chat);
+        String chat = chatService.chatWithContext(chatBot.get().getTopic(),context.toString(), message.toString());
+        chatResponse.setMessageText(chat);
         System.out.println(chat);
         return ResponseEntity.ok(chatResponse);
     }
