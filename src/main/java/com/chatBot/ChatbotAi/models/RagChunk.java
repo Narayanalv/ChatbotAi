@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.*;
+import org.hibernate.type.SqlTypes;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -29,8 +30,10 @@ public class RagChunk {
     private String textChunk;
     @Column(nullable = false)
     private Integer chunkIndex;
-    @Transient
-    @Column(columnDefinition = "vector(1024)")
+//    @Transient
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 1024)
+    @Column(name = "embedding")
     private PGvector embedding;
     private LocalDate CreatedDate = LocalDate.now();
     @CreationTimestamp

@@ -38,4 +38,8 @@ public class ChatBotService {
     public Optional<List<ChatBot>> getAllChatBots(Long userId) {
         return chatBotRepository.getBotsByUserId(userId);
     }
+
+    public boolean existsChatBotToUserId(Long chatBotId, Long userId) {
+        return chatBotRepository.existsChatBotToUserId(chatBotId, true, userId);
+    }
 }

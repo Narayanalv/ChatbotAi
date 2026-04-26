@@ -21,6 +21,9 @@ public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
     @Query("UPDATE ChatBot u SET u.chunkedData = :toVal WHERE u.chunkedData = :existVal AND u.id = :id")
     public int updateChunkedData(@Param("toVal") int toVal, @Param("existVal") int existVal, @Param("id") Long id);
 
+    @Query("SELECT EXISTS(SELECT 1 FROM ChatBot WHERE id = :chatBotId AND visible = :status AND userId = :userId)")
+    public boolean existsChatBotToUserId(Long chatBotId, boolean status, Long userId);
+
     public Optional<ChatBot> findById(Long id);
 
     public Optional<List<ChatBot>> getBotsByUserId(Long id);

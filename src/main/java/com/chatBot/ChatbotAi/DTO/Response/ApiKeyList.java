@@ -12,4 +12,8 @@ public class ApiKeyList {
         this.apiKey = apiKey.getApiKey().substring(0, 11) + "*".repeat(apiKey.getApiKey().length() - 11);
         this.status = apiKey.isActive();
     }
+
+    public ApiKeyList() {
+
+    }
 }

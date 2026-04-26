@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.sql.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -138,6 +139,10 @@ public class UserController extends UserControllerHelper {
 
     @GetMapping("/createApiKey/{id}")
     public ResponseEntity<Response> createApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long botId) {
+        Optional<ApiKey> apikeyExist = apiKeyRepository.getVisibleApikey(botId, true);
+        if (apikeyExist.isPresent()) {
+            return ResponseEntity.ok(new Response("api Key is already created", ERROR_CODE));
+        }
         ApiKey apiKey = new ApiKey();
         apiKey.setChatBotId(botId);
         apiKey.setUserId(user.getId());
@@ -148,13 +153,11 @@ public class UserController extends UserControllerHelper {
 
     @GetMapping("/getApiKey/{id}")
     public ResponseEntity<ApiKeyResponse> getApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long apiId) {
-        Optional<List<ApiKey>> apiKeyList = apiKeyRepository.getVisibleApikey(apiId, true);
+        Optional<ApiKey> apiKeyList = apiKeyRepository.getVisibleApikey(apiId, true);
         ApiKeyResponse response = new ApiKeyResponse();
-        List<ApiKeyList> listApiKey = new ArrayList<>();
+        ApiKeyList listApiKey = new ApiKeyList();
         if (apiKeyList.isPresent()) {
-            for (ApiKey apiKey : apiKeyList.get()) {
-                listApiKey.add(new ApiKeyList(apiKey));
-            }
+            listApiKey = new ApiKeyList(apiKeyList.get());
         }
         response.setApiKeyList(listApiKey);
         return ResponseEntity

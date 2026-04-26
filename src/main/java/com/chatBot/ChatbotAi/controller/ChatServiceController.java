@@ -6,6 +6,7 @@ import com.chatBot.ChatbotAi.DTO.Response.Response;
 import com.chatBot.ChatbotAi.models.ApiKey;
 import com.chatBot.ChatbotAi.models.ChatBot;
 import com.chatBot.ChatbotAi.models.RagChunk;
+import com.chatBot.ChatbotAi.models.User;
 import com.chatBot.ChatbotAi.service.ApiKeyService;
 import com.chatBot.ChatbotAi.service.ChatBotService;
 import com.chatBot.ChatbotAi.service.ChatService;
@@ -15,6 +16,7 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
@@ -59,6 +61,7 @@ public class ChatServiceController {
             for (RagChunk rag : ragChunks) {
                 context.append(rag.getTextChunk());
             }
+            System.out.println(context.toString());
         }
         String chat = chatService.chatWithContext(context.toString(), message.toString());
         response.setStatus(200);
@@ -82,6 +85,45 @@ public class ChatServiceController {
         chatResponse.setMessage(chat);
         System.out.println(chat);
         System.out.println(chatService.chatWithContext("test", chat));
+        return ResponseEntity.ok(chatResponse);
+    }
+
+    @PostMapping("/Chatbot/{chatBotId}")
+    public ResponseEntity<Response> testChat(@AuthenticationPrincipal User user, @RequestBody ChatDto chatDto, @PathVariable("chatBotId") Long id) {
+        ChatResponse chatResponse = new ChatResponse();
+        List<RagChunk> ragChunks;
+        StringBuilder context;
+        boolean exist = chatBotService.existsChatBotToUserId(id, user.getId());
+        ChatResponse response = new ChatResponse();
+        StringBuilder message = new StringBuilder(chatDto.getMessage());
+        if (!exist) {
+            response.setStatus(401);
+            response.setMessage("Unauthorized");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+        Optional<ChatBot> chatBot = chatBotService.getChatBotById(id);
+        if (chatBot.isEmpty() || chatBot.get().getChunkedData() != 2) {
+            response.setStatus(400);
+            if (chatBot.isEmpty()) {
+                response.setMessage("Chatbot not found");
+            } else {
+                response.setMessage("ChatBot is ready");
+            }
+            return new ResponseEntity<>(response, HttpStatus.BAD_GATEWAY);
+        }
+        if (message.isEmpty()) {
+            context = new StringBuilder(chatBot.get().getTopic());
+        } else {
+            ragChunks = ragChunkService.search(message.toString(), id, 5);
+            context = new StringBuilder();
+            for (RagChunk rag : ragChunks) {
+                context.append(rag.getTextChunk());
+            }
+            System.out.println(context.toString());
+        }
+        String chat = chatService.chatWithContext(context.toString(), message.toString());
+        chatResponse.setMessage(chat);
+        System.out.println(chat);
         return ResponseEntity.ok(chatResponse);
     }
 }

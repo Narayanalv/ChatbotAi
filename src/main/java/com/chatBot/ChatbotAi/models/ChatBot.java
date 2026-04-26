@@ -36,6 +36,8 @@ public class ChatBot {
     public String title;
     public String topic;
     public String document;
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    public boolean visible;
     @Column(columnDefinition = "SMALLINT")
     public int chunkedData = 0;
     private LocalDate CreatedDate = LocalDate.now();

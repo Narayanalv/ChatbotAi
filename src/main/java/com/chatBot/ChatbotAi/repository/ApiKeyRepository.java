@@ -16,7 +16,7 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
 
     public List<ApiKey> findAll();
 
-    public List<ApiKey> findByChatBotId(Long chatBotId);
+    public ApiKey findByChatBotId(Long chatBotId);
 
     public Optional<ApiKey> findById(Long id);
 
@@ -26,7 +26,7 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
     public int updateApiKeyStatus(Long id, boolean fromStatus, boolean toStatus);
 
     @Query("SELECT u FROM ApiKey u WHERE u.chatBotId = :chatBotId AND u.visible = :status")
-    Optional<List<ApiKey>> getVisibleApikey(Long chatBotId, boolean status);
+    Optional<ApiKey> getVisibleApikey(Long chatBotId, boolean status);
 
     @Modifying
     @Transactional

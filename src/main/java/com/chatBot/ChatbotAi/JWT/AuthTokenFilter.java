@@ -61,7 +61,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                     """);
             System.out.println(e.getMessage());
             return;
-
         }
         filterChain.doFilter(request, response);
     }
