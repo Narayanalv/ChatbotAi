@@ -5,7 +5,6 @@ import com.chatBot.ChatbotAi.repository.RagChunkRepository;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +18,12 @@ import java.util.List;
 public class RagChunkService {
     private final RagChunkRepository ragChunkRepository;
     private final EmbeddingModel embeddingModel;
-    private final VectorStore vectorStore;
 
     @Transactional
     public void saveChunck(String data, int i, Long chatBotId, Long userId) {
         RagChunk ragChunk = new RagChunk();
         ragChunk.setTextChunk(data);
-        ragChunk.setChunkIndex(0);
+        ragChunk.setChunkIndex(i);
         ragChunk.setUserId(userId);
         ragChunk.setChatBotId(chatBotId);
         float[] vector = embeddingModel.embed(data);
@@ -46,9 +44,7 @@ public class RagChunkService {
 
     public List<RagChunk> search(String query, Long chatBotId, int topK) {
         float[] queryVector = embeddingModel.embed(query);
-        String vectorStr = Arrays.toString(queryVector)
-                .replace("[", "[")
-                .replace("]", "]");
+        String vectorStr = Arrays.toString(queryVector);
         return ragChunkRepository.findSimilarChunks(chatBotId, vectorStr, topK);
     }
 

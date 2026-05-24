@@ -1,26 +1,18 @@
 package com.chatBot.ChatbotAi.config;
 
 import com.chatBot.ChatbotAi.JWT.AuthTokenFilter;
-import com.chatBot.ChatbotAi.models.User;
-import com.chatBot.ChatbotAi.repository.UserRepository;
+import com.chatBot.ChatbotAi.JWT.ApiKeyFilter;
 import com.chatBot.ChatbotAi.service.UserDetailsServiceImpl;
-import jakarta.annotation.sql.DataSourceDefinition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -39,21 +31,30 @@ public class SecurityConfig {
     @Autowired
     private AuthTokenFilter authTokenFilter;
     @Autowired
+    private ApiKeyFilter apiKeyFilter;
+    @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+        http.csrf(AbstractHttpConfigurer::disable)
 //                .cors(Customizer.withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(s -> s
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/api/register", "/api/login", "/api/verifyOTP", "/api/resendOTP", "/test")
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests((requests)
+                        -> requests.requestMatchers(
+                                "/api/register",
+                        "/api/login",
+                        "/api/verifyOTP",
+                        "/api/resendOTP",
+                        "/api/forgotPassword",
+                        "/api/resetPassword",
+                        "/api/verifyForgot",
+                        "/test").permitAll()
+                        .anyRequest()
+                        .authenticated())
+                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class);
 //        http.oauth2Login(Customizer.withDefaults());
         return http.build();
     }
@@ -69,8 +70,7 @@ public class SecurityConfig {
 //    }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-            throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 

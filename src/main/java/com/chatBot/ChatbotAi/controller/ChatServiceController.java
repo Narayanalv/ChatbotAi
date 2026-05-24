@@ -34,36 +34,38 @@ public class ChatServiceController {
     private final ChatService chatService;
     private final EmbeddingModel embeddingModel;
 
-    @PostMapping("/chat")
+    @PostMapping("/")
     public ResponseEntity<ChatResponse> getChatResponse(@RequestBody ChatDto chatDto,
-                                                        @RequestHeader("Authorization") String apiKey) {
+                                                        @AuthenticationPrincipal ChatBot chatBot) {
         List<RagChunk> ragChunks;
         StringBuilder context;
-        Optional<ApiKey> apiKeyData = apiKeyService.getApiKeyByApiKey(apiKey);
         ChatResponse response = new ChatResponse();
+
+        if (chatBot == null) {
+            response.setStatus(401);
+            response.setMessage("Unauthorized");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }
+
         StringBuilder message = new StringBuilder(chatDto.getMessage());
-        if (apiKeyData.isEmpty()) {
+        if (chatBot.getChunkedData() != 2) {
             response.setStatus(401);
             response.setMessage("Unauthorized");
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
-        Optional<ChatBot> chatBot = chatBotService.getChatBotById(apiKeyData.get().getChatBotId());
-        if (chatBot.isEmpty() || chatBot.get().getChunkedData() != 2) {
-            response.setStatus(401);
-            response.setMessage("Unauthorized");
-            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
-        }
+
         if (message.isEmpty()) {
-            context = new StringBuilder("write a wellcome message for the topic chatbot " + chatBot.get().getTopic());
+            context = new StringBuilder("write a wellcome message for the topic chatbot " + chatBot.getTopic());
         } else {
-            ragChunks = ragChunkService.search(message.toString(), apiKeyData.get().getChatBotId(), 5);
+            ragChunks = ragChunkService.search(message.toString(), chatBot.getId(), 5);
             context = new StringBuilder();
             for (RagChunk rag : ragChunks) {
-                context.append(rag.getTextChunk());
+                context.append(rag.getTextChunk()).append("\n\n---\n\n");
             }
             System.out.println(context.toString());
         }
-        String chat = chatService.chatWithContext(chatBot.get().getTopic(),context.toString(), message.toString());
+
+        String chat = chatService.chatWithContext(chatBot.getTopic(), context.toString(), message.toString());
         response.setStatus(200);
         response.setMessage("success");
         response.setMessageText(chat);
@@ -117,7 +119,7 @@ public class ChatServiceController {
             ragChunks = ragChunkService.search(message.toString(), id, 5);
             context = new StringBuilder();
             for (RagChunk rag : ragChunks) {
-                context.append(rag.getTextChunk());
+                context.append(rag.getTextChunk()).append("\n\n---\n\n");
             }
             System.out.println(context.toString());
         }

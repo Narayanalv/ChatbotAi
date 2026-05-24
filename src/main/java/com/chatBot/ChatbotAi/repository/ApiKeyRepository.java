@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface ApiKeyRepository extends JpaRepository<ApiKey, Long> {
+    @Query("SELECT u FROM ApiKey u WHERE u.apiKey = :apiKey AND u.visible = true AND u.active = true")
     public Optional<ApiKey> getApiKeyByApiKey(String apiKey);
 
     public List<ApiKey> findAll();

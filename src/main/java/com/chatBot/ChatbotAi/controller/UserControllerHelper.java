@@ -7,9 +7,11 @@ import com.chatBot.ChatbotAi.DTO.Response.Response;
 import com.chatBot.ChatbotAi.models.Otp;
 import com.chatBot.ChatbotAi.models.User;
 import com.chatBot.ChatbotAi.models.UserToken;
+import com.chatBot.ChatbotAi.service.EmailService;
 import com.chatBot.ChatbotAi.service.OtpService;
 import com.chatBot.ChatbotAi.service.UserService;
 import com.chatBot.ChatbotAi.service.UserTokenService;
+import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -38,6 +40,8 @@ public class UserControllerHelper {
     private UserTokenService userTokenService;
     @Autowired
     private JwtUtils jwtUtils;
+    @Autowired
+    private EmailService emailService;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
 
@@ -91,15 +95,16 @@ public class UserControllerHelper {
         return new String(otp);
     }
 
-    protected boolean sendOTP(User user) {
+    protected boolean sendOTP(User user, Otp.TypeEnum type) {
         Otp otp = new Otp();
         otp.setEmail(user.getEmail());
-        otp.setOtp(Integer.parseInt(generateOtp(6)));
+        otp.setOtp(generateOtp(6));
+        otp.setType(type);
         otp.setUser(user);
         System.out.println(otp.getOtp());
         otp = otpService.saveOtp(otp);
         userService.updateOtpId(user.getId(), otp.getId());
-        return true;
+        return emailService.sendOtpEmail(user.getEmail(), user.getName(), otp.getOtp());
     }
 
     protected String generateAccessToken(User user) {
@@ -111,13 +116,26 @@ public class UserControllerHelper {
         userTokenService.saveUserToken(userToken);
         user.setToken(tokenValue);
         userService.updateToken(user.getId(), tokenValue);
-        return jwtUtils.generateJwtToken(tokenValue);
+        return jwtUtils.generateJwtToken(tokenValue, "chatbot-ai", null);
+    }
+
+    protected String generateResetAccessToken(User user) {
+        String tokenValue = UUID.randomUUID().toString();
+        UserToken userToken = new UserToken();
+        userToken.setToken(tokenValue);
+        userToken.setUser(user);
+        userToken.setActive(true);
+        userToken.setType(Otp.TypeEnum.RESET);
+        userTokenService.saveUserToken(userToken);
+        user.setToken(tokenValue);
+        userService.updateToken(user.getId(), tokenValue);
+        return jwtUtils.generateJwtToken(tokenValue, "resetPassword", 1200000L);
     }
 
     protected LoginResponse validateVerifyOTP(VerifyOTPRequest verifyOTPRequest) {
         LoginResponse response = new LoginResponse();
-        int otp = verifyOTPRequest.getOtp();
-        if (String.valueOf(otp).length() != 6) {
+        String otp = verifyOTPRequest.getOtp();
+        if (otp.length() != 6) {
             return new LoginResponse(ERROR_CODE, "User not found");
         }
         String email = verifyOTPRequest.getEmail();
@@ -125,20 +143,21 @@ public class UserControllerHelper {
         if (user.isEmpty()) {
             return new LoginResponse(ERROR_CODE, "User not found");
         } else if (user.get().getOtpId() == null) {
-            return new LoginResponse(ERROR_CODE, "OTP not generated");
+            return new LoginResponse(ERROR_CODE, "Invalid OTP");
+        } else if (user.get().isVerified()) {
+            return new LoginResponse(ERROR_CODE, "User is already verified");
         }
-
         Optional<Otp> otpData = otpService.findOtpByid(user.get().getOtpId());
-        if (otpData.filter(otpInfo -> !otpInfo.isExpired()).isPresent()) {
+        if (otpData.isPresent() && otp.equals(String.valueOf(otpData.get().getOtp())) && otpData.get().isExpired()) {
             response.setStatus(ERROR_CODE);
             response.setMessage("OTP has expired");
         } else if (user.get().isVerified()) {
             response.setStatus(ERROR_CODE);
-            response.setMessage("OTP is already verified");
-        } else if (otpData.get().getStatus() != Otp.StatusEnum.PENDING) {
+            response.setMessage("You have already verified");
+        } else if (otpData.isPresent() && otpData.get().getStatus() != Otp.StatusEnum.PENDING) {
             response.setStatus(ERROR_CODE);
             response.setMessage("OTP has been " + otpData.get().getStatus());
-        } else if (otp == otpData.get().getOtp()) {
+        } else if (otp.equals(String.valueOf(otpData.get().getOtp()))) {
             return response;
         } else {
             response.setStatus(ERROR_CODE);

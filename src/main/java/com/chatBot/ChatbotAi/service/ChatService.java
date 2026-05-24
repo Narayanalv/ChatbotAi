@@ -1,6 +1,8 @@
 package com.chatBot.ChatbotAi.service;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.StreamingChatModel;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,7 @@ import reactor.core.publisher.Flux;
 
 @Service
 public class ChatService {
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
     private final ChatModel chatModel;
     private final StreamingChatModel streamingChatModel;
 
@@ -17,7 +20,12 @@ public class ChatService {
     }
 
     public String chat(String userMessage) {
-        return chatModel.call(userMessage);
+        try {
+            return chatModel.call(userMessage);
+        } catch (Exception e) {
+            log.error("Gemini API chat call failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Chat generation failed: " + getRootCauseMessage(e), e);
+        }
     }
 
     public String chatWithContext(String topic, String context, String question) {
@@ -32,17 +40,18 @@ public class ChatService {
                 3. Keep your answers concise, friendly, and to the point. Do not write long essays.
                 4. Base your answer strictly on the Context. Do not make up facts.
                 5. If the Context does not contain the answer, politely say something like "I'm sorry, I don't have that information." Do not summarize what the context does contain instead.
-                
                 Context:
                 %s
-                
                 Question:
                 %s
-                
-                Answer:
                 """.formatted(topic, context, question);
-        System.out.println(prompt);
-        return chatModel.call(prompt);
+        log.debug("Sending prompt to Gemini (length={})", prompt.length());
+        try {
+            return chatModel.call(prompt);
+        } catch (Exception e) {
+            log.error("Gemini API chatWithContext failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Chat generation failed: " + getRootCauseMessage(e), e);
+        }
     }
 
     public Flux<String> streamChat(String context, String question) {
@@ -68,5 +77,13 @@ public class ChatService {
                 """.formatted(context, question);
 
         return streamingChatModel.stream(prompt);
+    }
+
+    private String getRootCauseMessage(Throwable t) {
+        Throwable root = t;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return root.getClass().getSimpleName() + ": " + root.getMessage();
     }
 }

@@ -1,17 +1,19 @@
 package com.chatBot.ChatbotAi.controller;
 
-import com.chatBot.ChatbotAi.DTO.Request.AddChatBotRequest;
+import com.chatBot.ChatbotAi.DTO.Request.*;
 import com.chatBot.ChatbotAi.DTO.Response.*;
-import com.chatBot.ChatbotAi.DTO.Request.VerifyOTPRequest;
-import com.chatBot.ChatbotAi.DTO.Request.LoginRequest;
-import com.chatBot.ChatbotAi.DTO.Request.RegisterRequest;
+import com.chatBot.ChatbotAi.JWT.JwtUtils;
 import com.chatBot.ChatbotAi.models.*;
 import com.chatBot.ChatbotAi.repository.ApiKeyRepository;
 import com.chatBot.ChatbotAi.service.*;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.poi.ss.formula.functions.T;
+import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
@@ -20,6 +22,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.Valid;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -31,24 +34,32 @@ import java.util.OptionalInt;
 
 @RestController
 @RequestMapping("/api")
-@RequiredArgsConstructor
 public class UserController extends UserControllerHelper {
-    private final UserService userService;
-    private final OtpService otpService;
-    private final UserTokenService userTokenService;
-    private final AuthenticationManager authenticationManager;
-    private final CloudinaryService cloudinaryService;
-    private final ChatBotService chatBotService;
-    private final ApiKeyRepository apiKeyRepository;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private OtpService otpService;
+    @Autowired
+    private UserTokenService userTokenService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    private CloudinaryService cloudinaryService;
+    @Autowired
+    private ChatBotService chatBotService;
+    @Autowired
+    private ApiKeyRepository apiKeyRepository;
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @PostMapping("/register")
-    public ResponseEntity<Response> register(@RequestBody RegisterRequest registerRequest) {
-        Response response = validateRegister(registerRequest);
+    public ResponseEntity<Response> register(@RequestBody @Valid RegisterRequest registerRequest) {
+        Response response = this.validateRegister(registerRequest);
         if (response.getStatus() == SUCCESS_CODE) {
             try {
                 User user = userService.registerUser(registerRequest);
                 System.out.println(user);
-                if (!this.sendOTP(user)) {
+                if (!this.sendOTP(user, Otp.TypeEnum.USER)) {
                     throw new UsernameNotFoundException("Username not found");
                 }
             } catch (Exception e) {
@@ -56,13 +67,11 @@ public class UserController extends UserControllerHelper {
                 response.setMessage("Something went wrong " + e.getMessage());
             }
         }
-        return ResponseEntity
-                .status(response.getStatus())
-                .body(response);
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @PostMapping("/verifyOTP")
-    public ResponseEntity<LoginResponse> verifyOTP(@RequestBody VerifyOTPRequest verifyOTP) {
+    public ResponseEntity<LoginResponse> verifyOTP(@RequestBody @Valid VerifyOTPRequest verifyOTP) {
         LoginResponse response = validateVerifyOTP(verifyOTP);
         String email = verifyOTP.getEmail();
         Optional<User> user = null;
@@ -70,7 +79,7 @@ public class UserController extends UserControllerHelper {
             user = userService.findUserByEmail(email);
             Optional<Otp> otpData = otpService.findOtpByid(user.get().getOtpId());
             if (otpData.isPresent()) {
-                int updated = otpService.updateStatus(otpData.get().getId(), otpData.get().getStatus(), Otp.StatusEnum.VERIFIED);
+                int updated = otpService.updateStatus(otpData.get().getId(), Otp.StatusEnum.VERIFIED);
                 if (updated == 1) {
                     user.get().setVerified(true);
                     userService.updateUser(user.get());
@@ -78,22 +87,94 @@ public class UserController extends UserControllerHelper {
                 }
             }
         }
-        return ResponseEntity
-                .status(response.getStatus())
-                .body(response);
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-        } catch (DisabledException | LockedException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("User Not Found", ERROR_CODE));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response("Invalid email or password.", ERROR_CODE));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("User Not Found", ERROR_CODE));
         }
         User user = userService.findUserByEmail(loginRequest.getEmail()).orElseThrow(() -> new UsernameNotFoundException(loginRequest.getEmail()));
         return ResponseEntity.ok(new LoginResponse(this.generateAccessToken(user)));
+    }
+
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<Response> resetPassword(@RequestBody @Valid ForgetPassword forgetPassword) {
+        Response response = new LoginResponse(ERROR_CODE, "User Not Found");
+        try {
+            Optional<User> user = userService.findUserByEmail(forgetPassword.getEmail());
+            System.out.println(forgetPassword.getEmail() + " /n" + user);
+            if (user.isPresent()) {
+                if (this.sendOTP(user.get(), Otp.TypeEnum.RESET)) {
+                    response = new Response();
+                } else {
+                    response.setMessage("Failed to send OTP");
+                }
+            }
+        } catch (Exception e) {
+            response = new LoginResponse(ERROR_CODE, "Something went wrong: " + e.getMessage());
+        }
+        return ResponseEntity.status(response.getStatus()).body(response);
+    }
+
+    @PostMapping("/verifyForgot")
+    public ResponseEntity<LoginResponse> verifyForgot(@RequestBody @Valid VerifyOTPRequest verifyOTP) {
+        LoginResponse response = new LoginResponse(ERROR_CODE, "User Not Found");
+        Optional<User> user = userService.findUserByEmail(verifyOTP.getEmail());
+        System.out.println(verifyOTP.getEmail() + " /n" + user.get().getId());
+        if (user.isPresent()) {
+            Optional<Otp> otp = otpService.findOtpByid(user.get().getOtpId());
+            if (otp.isEmpty()) {
+                response.setMessage("Invalid Otp");
+            } else if (otp.get().isExpired()) {
+                response.setMessage("Expired Otp");
+            } else if (String.valueOf(otp.get().getOtp()).equals(verifyOTP.getOtp())) {
+                int updated = otpService.updateStatus(otp.get().getId(), Otp.StatusEnum.VERIFIED);
+                if (updated == 1) {
+                    user.get().setVerified(true);
+                    userService.updateUser(user.get());
+                    response = new LoginResponse(this.generateResetAccessToken(user.get()));
+                } else {
+                    response.setMessage("Could not verify your Otp");
+                }
+            } else {
+                response.setMessage("Not equal");
+            }
+        } else {
+            response.setMessage("user empty");
+        }
+        return ResponseEntity.status(response.getStatus()).body(response);
+    }
+
+    @PostMapping("/resetPassword")
+    public ResponseEntity<Response> changePassword(@RequestBody @Valid ChangePassword changePassword, @NonNull HttpServletRequest request) {
+        Response response = new LoginResponse(ERROR_CODE, "User Not Found");
+        String accessToken = jwtUtils.getAuthenticationToken(request);
+        String token = jwtUtils.getSessionFromJwtToken(accessToken);
+        Optional<UserToken> userToken = userTokenService.getUserToken(token);
+        if (jwtUtils.validateJwtToken(accessToken) && userToken.isPresent()) {
+            Claims claim = jwtUtils.getClaims(accessToken);
+            String app = claim.get("app").toString();
+            User user = userToken.get().getUser();
+            if (!app.equals("resetPassword")) {
+                response.setStatus(401);
+                response.setMessage("Unauthorized");
+            } else if (changePassword.getPassword().equals(changePassword.getConfirmPassword())) {
+                int update = userService.updatePassword(user.getId(), changePassword.getPassword());
+                if (update == 1) {
+                    response = new Response();
+                }
+            }
+        } else {
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            response.setMessage("Unauthorized");
+        }
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @GetMapping("/isLoggedIn")
@@ -108,7 +189,7 @@ public class UserController extends UserControllerHelper {
     }
 
     @PostMapping("/addChatBot")
-    public ResponseEntity<Response> addChatBot(AddChatBotRequest request, @AuthenticationPrincipal User user) throws IOException {
+    public ResponseEntity<Response> addChatBot(@RequestBody @Valid AddChatBotRequest request, @AuthenticationPrincipal User user) throws IOException {
         MultipartFile file = request.getFile();
         if (file == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -132,9 +213,7 @@ public class UserController extends UserControllerHelper {
             String fileName = Path.of(imageName.getPath()).getFileName().toString();
             ChatBot chatBot = chatBotService.createChat(user.getId(), request.getTitle(), request.getTopic(), fileName);
         }
-        return ResponseEntity
-                .status(response.getStatus())
-                .body(response);
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @GetMapping("/createApiKey/{id}")
@@ -158,29 +237,21 @@ public class UserController extends UserControllerHelper {
         ApiKeyList listApiKey = new ApiKeyList();
         if (apiKeyList.isPresent()) {
             listApiKey = new ApiKeyList(apiKeyList.get());
+            response.setApiKeyList(listApiKey);
         }
-        response.setApiKeyList(listApiKey);
-        return ResponseEntity
-                .status(response.getStatus())
-                .body(response);
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 
     @GetMapping("/activateKey/{id}/{status}")
-    public ResponseEntity<Response> activateApiKey(@AuthenticationPrincipal User user,
-                                                   @PathVariable("id") Long apiKeyId,
-                                                   @PathVariable("status") boolean status) {
+    public ResponseEntity<Response> activateApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long apiKeyId, @PathVariable("status") boolean status) {
         Response response = new Response();
         int apiUpdate = apiKeyRepository.updateApiKeyStatus(apiKeyId, status, !status);
         if (apiUpdate >= 1) {
-            return ResponseEntity
-                    .status(response.getStatus())
-                    .body(response);
+            return ResponseEntity.status(response.getStatus()).body(response);
         } else {
             response.setStatus(ERROR_CODE);
             response.setMessage("failed to activate api key");
-            return ResponseEntity
-                    .status(response.getStatus())
-                    .body(response);
+            return ResponseEntity.status(response.getStatus()).body(response);
         }
     }
 
@@ -197,9 +268,7 @@ public class UserController extends UserControllerHelper {
         } else {
             listBotResponse = new ListBotResponse(false);
         }
-        return ResponseEntity
-                .status(listBotResponse.getStatus())
-                .body(listBotResponse);
+        return ResponseEntity.status(listBotResponse.getStatus()).body(listBotResponse);
     }
 
     @GetMapping("/getKey/{id}")
@@ -208,13 +277,10 @@ public class UserController extends UserControllerHelper {
         GetApiKeyResponse getApiKeyResponse = new GetApiKeyResponse();
         if (key.isPresent()) {
             getApiKeyResponse.setApiKey(key.get().getApiKey());
-            return ResponseEntity
-                    .ok(getApiKeyResponse);
+            return ResponseEntity.ok(getApiKeyResponse);
         } else {
             getApiKeyResponse.setApiKey(null);
-            return ResponseEntity
-                    .status(ERROR_CODE)
-                    .body(getApiKeyResponse);
+            return ResponseEntity.status(ERROR_CODE).body(getApiKeyResponse);
         }
     }
 
@@ -224,9 +290,7 @@ public class UserController extends UserControllerHelper {
         if (deleted >= 1) {
             return ResponseEntity.ok(new Response("deleted api key successfully", SUCCESS_CODE));
         } else {
-            return ResponseEntity
-                    .status(ERROR_CODE)
-                    .body(new Response("Failed to delete", ERROR_CODE));
+            return ResponseEntity.status(ERROR_CODE).body(new Response("Failed to delete", ERROR_CODE));
         }
     }
 }

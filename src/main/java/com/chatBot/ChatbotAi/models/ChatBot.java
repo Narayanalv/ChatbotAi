@@ -27,6 +27,7 @@ public class ChatBot {
         this.title = title;
         this.topic = topic;
         this.document = document;
+        this.visible = true;
     }
 
     @Id

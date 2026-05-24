@@ -24,7 +24,7 @@ public class OtpService {
         return otpRepository.findById(id);
     }
 
-    public int updateStatus(Long id, Otp.StatusEnum fromStatus, Otp.StatusEnum toStatus) {
-        return otpRepository.updateStatus(id, fromStatus, toStatus);
+    public int updateStatus(Long id, Otp.StatusEnum toStatus) {
+        return otpRepository.updateStatus(id, Otp.StatusEnum.PENDING, toStatus);
     }
 }

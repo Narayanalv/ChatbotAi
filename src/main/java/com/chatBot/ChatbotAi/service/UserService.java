@@ -39,6 +39,11 @@ public class UserService {
 
     public void updateToken(Long userId, String token) {
         userRepository.updateToken(userId, token);
+
+    }
+
+    public int updatePassword(Long userId, String password) {
+        return userRepository.updatePassword(userId, passwordEncoder.encode(password));
     }
 
 //    public void deleteUser(Long id) {

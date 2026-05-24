@@ -5,6 +5,7 @@ import java.io.IOException;
 import com.chatBot.ChatbotAi.DTO.Response.Response;
 import com.chatBot.ChatbotAi.models.UserToken;
 import com.chatBot.ChatbotAi.service.UserDetailsServiceImpl;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +42,20 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             String jwt = jwtUtils.getAuthenticationToken(request);
             logger.debug("1. JWT extracted: {}", jwt);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                Claims claim = jwtUtils.getClaims(jwt);
+                String app = claim.get("app").toString();
+                if (app.equals("chatbot-ai")) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("""
+                            {
+                              "status":401,
+                              "message":"Unauthorized"
+                            }
+                            """);
+                    System.out.println("its a reset token");
+                    return;
+                }
                 String token = jwtUtils.getSessionFromJwtToken(jwt);
                 UserToken userToken = userDetailsService.loadUserByToken(token);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -34,7 +35,7 @@ public class RagChunk {
 //    @Array(length = 1024)
 //    @Column(name = "embedding")
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = 1024)
+    @Array(length = 3072)
     @Column(name = "embedding")
     private float[] embedding;
     private LocalDate CreatedDate = LocalDate.now();

@@ -2,6 +2,7 @@ package com.chatBot.ChatbotAi.JWT;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -24,12 +25,15 @@ public class JwtUtils {
     @Value("${spring.app.jwtExpirationMs}")
     private Long jwtExpirationMs;
 
-    public String generateJwtToken(String sessionKey) {
+    public String generateJwtToken(String sessionKey, String app, Long jwtExpiration) {
+        if (jwtExpiration == null || jwtExpiration <= 0) {
+            jwtExpiration = jwtExpirationMs;
+        }
         return Jwts.builder()
                 .subject(sessionKey)
                 .issuedAt(new Date())
-                .claim("app", "chatbot-ai")
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .claim("app", app)
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(key())
                 .compact();
     }
@@ -38,6 +42,13 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
+    public Claims getClaims(String token) {
+        return Jwts.parser()
+                .verifyWith((SecretKey) key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload(); // returns all claims
+    }
 
     public String getAuthenticationToken(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
@@ -52,10 +63,14 @@ public class JwtUtils {
     }
 
     public boolean validateJwtToken(String authToken) {
-//        String subject = null;
+        // A valid compact JWT must have 3 parts separated by 2 periods.
+        // If it doesn't, it might be an API Key or malformed token, so we fail silently.
+        if (authToken == null || authToken.split("\\.").length != 3) {
+            return false;
+        }
+
         try {
             Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
-//            subject = jwtPayload.getSubject();
             return true;
         } catch (MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());

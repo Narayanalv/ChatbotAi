@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Date;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicInsert;
@@ -25,10 +26,13 @@ public class UserToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String token;
-//    private Long userId;
+    //    private Long userId;
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
+    @Enumerated(EnumType.STRING)
+    private Otp.TypeEnum type = Otp.TypeEnum.USER;
+
     private boolean active;
     private LocalDate CreatedDate = LocalDate.now();
     @CreationTimestamp

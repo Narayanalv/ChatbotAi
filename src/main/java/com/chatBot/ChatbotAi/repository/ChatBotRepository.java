@@ -26,5 +26,6 @@ public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
 
     public Optional<ChatBot> findById(Long id);
 
-    public Optional<List<ChatBot>> getBotsByUserId(Long id);
+    @Query("SELECT c FROM ChatBot c WHERE c.visible = true AND c.userId = :id")
+    Optional<List<ChatBot>> getBotsByUserId(Long id);
 }
