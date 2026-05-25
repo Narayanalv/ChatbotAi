@@ -17,7 +17,7 @@ public class EmailService {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("ragchatbotac@gmail.com");
+            helper.setFrom("ragchatbotac@gmail.com", "ChatbotAI Support");
             helper.setTo(toEmail);
             helper.setSubject("Your OTP");
             helper.setText(this.getBody(name, otp), true);
