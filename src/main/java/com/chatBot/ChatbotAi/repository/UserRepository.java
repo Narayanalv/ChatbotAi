@@ -2,6 +2,7 @@ package com.chatBot.ChatbotAi.repository;
 
 import com.chatBot.ChatbotAi.models.User;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -33,7 +34,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("UPDATE User u SET u.password = :password WHERE u.id = :id")
     public int updatePassword(@Param("id") Long id, @Param("password") String password);
 
-//    @Modifying
-//    @Query("Update User u SET u.name = :name, u.password = :password where u.email = :email")
-//    int updateUser(@Param("name") String name, @Param("password") String password, @Param("email") String email);
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.googleId = :googleId")
+    Optional<User> getUserByEmailGId(@Param("email") String email, @Param("googleId") String googleId);
 }

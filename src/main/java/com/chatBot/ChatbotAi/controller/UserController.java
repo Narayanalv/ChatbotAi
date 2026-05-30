@@ -6,6 +6,10 @@ import com.chatBot.ChatbotAi.JWT.JwtUtils;
 import com.chatBot.ChatbotAi.models.*;
 import com.chatBot.ChatbotAi.repository.ApiKeyRepository;
 import com.chatBot.ChatbotAi.service.*;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.poi.ss.formula.functions.T;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
@@ -27,10 +32,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.sql.Array;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -51,6 +53,10 @@ public class UserController extends UserControllerHelper {
     private ApiKeyRepository apiKeyRepository;
     @Autowired
     private JwtUtils jwtUtils;
+    @Autowired
+    private GoogleTokenService googleTokenService;
+    @Value("${google.OAuth.key}")
+    private String googleKey;
 
     @PostMapping("/register")
     public ResponseEntity<Response> register(@RequestBody @Valid RegisterRequest registerRequest) {
@@ -68,6 +74,74 @@ public class UserController extends UserControllerHelper {
             }
         }
         return ResponseEntity.status(response.getStatus()).body(response);
+    }
+
+    @PostMapping("/auth/google/register")
+    public ResponseEntity<LoginResponse> googleOAuthRegister(@RequestBody @Valid OAuthRequest oAuthRequest) {
+        LoginResponse loginResponse = new LoginResponse();
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleKey))
+                    .build();
+            System.out.println(oAuthRequest.getToken());
+            GoogleIdToken idToken = verifier.verify(oAuthRequest.getToken());
+            System.out.println(idToken);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                String userId = payload.getSubject();
+                String email = payload.getEmail();
+                String name = (String) payload.get("name");
+                Optional<User> userCheck = userService.findUserByEmail(email);
+                if (userCheck.isEmpty()) {
+                    User user = new User();
+                    user.setEmail(email);
+                    user.setName(name);
+                    user.setGoogleId(userId);
+                    user.setVerified(true);
+                    user = userService.registerOAuth(user);
+                    loginResponse = new LoginResponse();
+                    loginResponse.setAccessToken(this.generateAccessToken(user));
+                } else {
+                    loginResponse = new LoginResponse(ERROR_CODE, "You have already registered");
+                }
+            } else {
+                loginResponse = new LoginResponse(ERROR_CODE, "Authentication Failed 2");
+            }
+        } catch (Exception e) {
+
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
+    }
+
+    @PostMapping("/auth/google/login")
+    public ResponseEntity<LoginResponse> googleOAuthLogin(@RequestBody @Valid OAuthRequest oAuthRequest) {
+        LoginResponse loginResponse = new LoginResponse();
+        try {
+            System.out.println(googleKey);
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleKey))
+                    .build();
+            System.out.println(oAuthRequest.getToken());
+            GoogleIdToken idToken = verifier.verify(oAuthRequest.getToken());
+            System.out.println(idToken);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                String userId = payload.getSubject();
+                String email = payload.getEmail();
+                Optional<User> userCheck = userService.getUserByEmailGId(email, userId);
+                if (userCheck.isEmpty()) {
+                    loginResponse = new LoginResponse(ERROR_CODE, "You have not registered or registered with password");
+                } else {
+                    loginResponse = new LoginResponse();
+                    loginResponse.setAccessToken(this.generateAccessToken(userCheck.get()));
+                }
+            } else {
+                loginResponse = new LoginResponse(ERROR_CODE, "Authentication Failed 3");
+            }
+        } catch (Exception e) {
+
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
     }
 
     @PostMapping("/verifyOTP")

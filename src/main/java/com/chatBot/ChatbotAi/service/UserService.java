@@ -29,6 +29,10 @@ public class UserService {
         return userRepository.save(newUser);
     }
 
+    public User registerOAuth(User user) {
+        return userRepository.save(user);
+    }
+
     public void updateUser(User user) {
         userRepository.save(user);
     }
@@ -39,7 +43,10 @@ public class UserService {
 
     public void updateToken(Long userId, String token) {
         userRepository.updateToken(userId, token);
+    }
 
+    public Optional<User> getUserByEmailGId(String email, String googleId) {
+        return userRepository.getUserByEmailGId(email, googleId);
     }
 
     public int updatePassword(Long userId, String password) {
