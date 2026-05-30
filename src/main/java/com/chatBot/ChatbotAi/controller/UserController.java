@@ -27,7 +27,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -263,18 +263,16 @@ public class UserController extends UserControllerHelper {
     }
 
     @PostMapping("/addChatBot")
-    public ResponseEntity<Response> addChatBot(@RequestBody @Valid AddChatBotRequest request, @AuthenticationPrincipal User user) throws IOException {
+    public ResponseEntity<Response> addChatBot(@ModelAttribute @Valid AddChatBotRequest request, @AuthenticationPrincipal User user) throws IOException {
         MultipartFile file = request.getFile();
         if (file == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
+        System.out.println("check");
+        System.out.println("Uploading file: " + file.getOriginalFilename());
         byte[] fileBytes = file.getBytes();
-        PDDocument document = Loader.loadPDF(fileBytes);
         Response response = new Response();
-        if (this.hasImage(document)) {
-            response.setStatus(ERROR_CODE);
-            response.setMessage("Pdf should contain only text");
-        } else if (request.getTitle().isEmpty()) {
+        if (request.getTitle().isEmpty()) {
             response.setStatus(ERROR_CODE);
             response.setMessage("Title should not be empty");
         } else if (request.getTopic().isEmpty()) {

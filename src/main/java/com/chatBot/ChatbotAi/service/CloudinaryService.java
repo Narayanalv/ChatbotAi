@@ -24,4 +24,16 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(file, options);
         return (String) uploadResult.get("url");
     }
+
+    public String uploadImage(byte[] imageBytes, String format) throws IOException {
+        Map options = ObjectUtils.asMap(
+                "folder", "chatBotImages",
+                "public_id", UUID.randomUUID().toString(),
+                "upload_preset", "chatbot_unsigned",
+                "resource_type", "image",
+                "format", format
+        );
+        Map uploadResult = cloudinary.uploader().upload(imageBytes, options);
+        return (String) uploadResult.get("url");
+    }
 }

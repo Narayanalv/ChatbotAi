@@ -48,4 +48,18 @@ public class RagChunkService {
         return ragChunkRepository.findSimilarChunks(chatBotId, vectorStr, topK);
     }
 
+    @Transactional
+    public void saveImageChunk(String description, String imageUrl, int i, Long chatBotId, Long userId) {
+        RagChunk ragChunk = new RagChunk();
+        ragChunk.setTextChunk(description);
+        ragChunk.setChunkIndex(i);
+        ragChunk.setUserId(userId);
+        ragChunk.setChatBotId(chatBotId);
+        ragChunk.setChunkType("IMAGE");
+        ragChunk.setImageUrl(imageUrl);
+        float[] vector = embeddingModel.embed(description);
+        ragChunk.setEmbedding(vector);
+        ragChunkRepository.save(ragChunk);
+    }
+
 }

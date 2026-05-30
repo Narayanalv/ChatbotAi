@@ -57,10 +57,15 @@ public class ChatServiceController {
         if (message.isEmpty()) {
             context = new StringBuilder("write a wellcome message for the topic chatbot " + chatBot.getTopic());
         } else {
-            ragChunks = ragChunkService.search(message.toString(), chatBot.getId(), 5);
+            ragChunks = ragChunkService.search(message.toString(), chatBot.getId(), 10);
             context = new StringBuilder();
             for (RagChunk rag : ragChunks) {
-                context.append(rag.getTextChunk()).append("\n\n---\n\n");
+                if ("IMAGE".equals(rag.getChunkType())) {
+                    context.append("[Image: ").append(rag.getImageUrl()).append("] ")
+                           .append(rag.getTextChunk()).append("\n\n---\n\n");
+                } else {
+                    context.append(rag.getTextChunk()).append("\n\n---\n\n");
+                }
             }
             System.out.println(context.toString());
         }
@@ -116,10 +121,15 @@ public class ChatServiceController {
         if (message.isEmpty()) {
             context = new StringBuilder(chatBot.get().getTopic());
         } else {
-            ragChunks = ragChunkService.search(message.toString(), id, 5);
+            ragChunks = ragChunkService.search(message.toString(), id, 10);
             context = new StringBuilder();
             for (RagChunk rag : ragChunks) {
-                context.append(rag.getTextChunk()).append("\n\n---\n\n");
+                if ("IMAGE".equals(rag.getChunkType())) {
+                    context.append("[Image: ").append(rag.getImageUrl()).append("] ")
+                           .append(rag.getTextChunk()).append("\n\n---\n\n");
+                } else {
+                    context.append(rag.getTextChunk()).append("\n\n---\n\n");
+                }
             }
             System.out.println(context.toString());
         }

@@ -38,6 +38,10 @@ public class RagChunk {
     @Array(length = 3072)
     @Column(name = "embedding")
     private float[] embedding;
+    @Column(nullable = false, columnDefinition = "VARCHAR(10)")
+    private String chunkType = "TEXT";
+    @Column(columnDefinition = "TEXT")
+    private String imageUrl;
     private LocalDate CreatedDate = LocalDate.now();
     @CreationTimestamp
     @Column(updatable = false, nullable = false)

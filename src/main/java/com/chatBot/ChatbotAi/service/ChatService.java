@@ -3,10 +3,17 @@ package com.chatBot.ChatbotAi.service;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.StreamingChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
+
+import java.net.URI;
+import java.util.List;
 
 @Service
 public class ChatService {
@@ -77,6 +84,24 @@ public class ChatService {
                 """.formatted(context, question);
 
         return streamingChatModel.stream(prompt);
+    }
+
+    public String describeImage(String imageUrl) {
+        try {
+            Media imageMedia = new Media(MimeTypeUtils.IMAGE_PNG, URI.create(imageUrl));
+            UserMessage userMessage = UserMessage.builder()
+                    .text("Describe this PDF page image in detail. Include all text content, diagrams, charts, tables, " +
+                          "and visual elements you can see. This description will be used for search indexing.")
+                    .media(imageMedia)
+                    .build();
+            String response = chatModel.call(new Prompt(List.of(userMessage)))
+                    .getResult().getOutput().getText();
+            log.info("Image described successfully (length={})", response.length());
+            return response;
+        } catch (Exception e) {
+            log.error("Failed to describe image: {}", e.getMessage(), e);
+            return "Image from document page";
+        }
     }
 
     private String getRootCauseMessage(Throwable t) {

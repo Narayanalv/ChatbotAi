@@ -20,7 +20,7 @@ public class ChatBotService {
     }
 
     public Optional<ChatBot> getPendingChunk(int chunked) {
-        return chatBotRepository.findByChunkedData(chunked);
+        return chatBotRepository.findFirstByChunkedData(chunked);
     }
 
     public int updateChatBotChunkStart(Long id) {

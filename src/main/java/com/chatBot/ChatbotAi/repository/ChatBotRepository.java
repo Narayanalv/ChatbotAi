@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Repository
 public interface ChatBotRepository extends JpaRepository<ChatBot, Long> {
-    public Optional<ChatBot> findByChunkedData(Integer chunkedData);
+    public Optional<ChatBot> findFirstByChunkedData(Integer chunkedData);
 
     @Modifying
     @Transactional
