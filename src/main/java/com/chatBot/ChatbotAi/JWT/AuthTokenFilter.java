@@ -43,8 +43,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             logger.debug("1. JWT extracted: {}", jwt);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 Claims claim = jwtUtils.getClaims(jwt);
+                System.out.println(claim.toString());
                 String app = claim.get("app").toString();
-                if (app.equals("chatbot-ai")) {
+                if (app.equals("resetPassword")) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
                     response.getWriter().write("""
