@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local properties containing secrets
+**/application-local.properties
+
