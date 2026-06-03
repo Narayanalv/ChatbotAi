@@ -25,6 +25,20 @@ public interface RagChunkRepository extends JpaRepository<RagChunk, Integer> {
             @Param("topK") int topK
     );
 
+    @Query(value = """
+            SELECT * FROM rag_chunk
+            WHERE chat_bot_id = :chatBotId
+              AND (embedding <=> CAST(:embedding AS vector)) <= :maxDistance
+            ORDER BY embedding <=> CAST(:embedding AS vector)
+            LIMIT :topK
+            """, nativeQuery = true)
+    List<RagChunk> findSimilarChunksWithThreshold(
+            @Param("chatBotId") Long chatBotId,
+            @Param("embedding") String embedding,
+            @Param("topK") int topK,
+            @Param("maxDistance") double maxDistance
+    );
+
     @Modifying
     @Query(value = """
             INSERT INTO rag_chunk 

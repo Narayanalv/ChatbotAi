@@ -23,12 +23,15 @@ public class ChatLog {
     private Long id;
     @Column(unique = true)
     private String token = UUID.randomUUID().toString();
+    @Column(columnDefinition = "TEXT")
     private String message;
+    @Column(columnDefinition = "TEXT")
     private String responseMessage;
-    private long ApiKeyId;
-    private Long ChatBotId;
-    private String ContextIds;
-    private LocalDate CreatedDate = LocalDate.now();
+    private long apiKeyId;
+    private Long chatBotId;
+    @Column(columnDefinition = "TEXT")
+    private String contextIds;
+    private LocalDate createdDate = LocalDate.now();
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private Timestamp createdAt;

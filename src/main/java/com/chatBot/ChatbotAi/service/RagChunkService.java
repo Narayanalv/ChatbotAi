@@ -5,6 +5,7 @@ import com.chatBot.ChatbotAi.repository.RagChunkRepository;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RagChunkService {
+
+    @Value("${rag.search.top-k:15}")
+    private int defaultTopK;
+
+    @Value("${rag.search.max-distance:0.8}")
+    private double defaultMaxDistance;
     private final RagChunkRepository ragChunkRepository;
     private final EmbeddingModel embeddingModel;
 
@@ -46,6 +53,16 @@ public class RagChunkService {
         float[] queryVector = embeddingModel.embed(query);
         String vectorStr = Arrays.toString(queryVector);
         return ragChunkRepository.findSimilarChunks(chatBotId, vectorStr, topK);
+    }
+
+    public List<RagChunk> searchWithThreshold(String query, Long chatBotId) {
+        float[] queryVector = embeddingModel.embed(query);
+        String vectorStr = Arrays.toString(queryVector);
+        return ragChunkRepository.findSimilarChunksWithThreshold(chatBotId, vectorStr, defaultTopK, defaultMaxDistance);
+    }
+
+    public int getDefaultTopK() {
+        return defaultTopK;
     }
 
     @Transactional

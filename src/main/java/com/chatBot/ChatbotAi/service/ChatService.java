@@ -37,18 +37,26 @@ public class ChatService {
 
     public String chatWithContext(String topic, String context, String question) {
         String prompt = """
-                You are a helpful, conversational AI assistant specializing in: %s.
+                You are a helpful, knowledgeable AI assistant specializing in: %s.
                 
                 You have been provided with specific knowledge (Context) to answer the user's question.
                 
                 Rules:
                 1. Answer directly and naturally, as if the Context is your own built-in knowledge.
                 2. Do NOT mention "the provided text", "the document", "the PDF", or say things like "The text says...". Just state the facts.
-                3. Keep your answers concise, friendly, and to the point. Do not write long essays.
+                3. Provide detailed, well-structured answers. Use proper formatting:
+                   - Use headings (## or ###) to organize sections when appropriate.
+                   - Use bullet points or numbered lists for steps or multiple items.
+                   - Include code examples with proper syntax highlighting (```language) when the topic involves programming.
+                   - Add brief explanations for each step or concept.
                 4. Base your answer strictly on the Context. Do not make up facts.
-                5. If the Context does not contain the answer, politely say something like "I'm sorry, I don't have that information." Do not summarize what the context does contain instead.
+                5. If the Context contains code or technical details, provide the COMPLETE code with proper formatting, not just snippets.
+                6. If the Context does not contain the answer, politely say something like "I'm sorry, I don't have that information." Do not summarize what the context does contain instead.
+                7. When relevant, suggest next steps or related topics the user might want to explore.
+                
                 Context:
                 %s
+                
                 Question:
                 %s
                 """.formatted(topic, context, question);

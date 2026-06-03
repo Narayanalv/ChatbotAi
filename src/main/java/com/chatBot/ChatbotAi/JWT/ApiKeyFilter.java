@@ -51,6 +51,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                     ChatBot chatBot = chatBotOpt.get();
                     UsernamePasswordAuthenticationToken authentication = 
                             new UsernamePasswordAuthenticationToken(chatBot, null, null);
+                    authentication.setDetails(apiKey);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     success = true;
                 }

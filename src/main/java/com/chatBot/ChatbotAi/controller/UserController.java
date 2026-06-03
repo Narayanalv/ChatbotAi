@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
+
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -55,6 +56,8 @@ public class UserController extends UserControllerHelper {
     private JwtUtils jwtUtils;
     @Autowired
     private GoogleTokenService googleTokenService;
+    @Autowired
+    private ChatLogService chatLogService;
     @Value("${google.OAuth.key}")
     private String googleKey;
 
@@ -358,11 +361,52 @@ public class UserController extends UserControllerHelper {
 
     @GetMapping("/deleteApiKey/{id}")
     public ResponseEntity<Response> deleteApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long id) {
-        int deleted = apiKeyRepository.updateVisible(id, false);
-        if (deleted >= 1) {
-            return ResponseEntity.ok(new Response("deleted api key successfully", SUCCESS_CODE));
+        Optional<ApiKey> key = apiKeyRepository.findById(id);
+        GetApiKeyResponse getApiKeyResponse = new GetApiKeyResponse();
+        if (key.isPresent()) {
+            int deleted = apiKeyRepository.updateVisible(id, false);
+            if (deleted >= 1) {
+                return ResponseEntity.ok(new Response("deleted api key successfully", SUCCESS_CODE));
+            } else {
+                return ResponseEntity.status(ERROR_CODE).body(new Response("Failed to delete", ERROR_CODE));
+            }
         } else {
-            return ResponseEntity.status(ERROR_CODE).body(new Response("Failed to delete", ERROR_CODE));
+            return ResponseEntity.status(401).body(new Response("Failed to delete", 401));
         }
+    }
+
+    @GetMapping("/getBot/history/{id}")
+    public ResponseEntity<Response> getBotHistory(
+            @AuthenticationPrincipal User user,
+            @PathVariable("id") Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        boolean exists = chatBotService.existsChatBotToUserId(id, user.getId());
+        if (!exists) {
+            return ResponseEntity.status(401).body(new Response("Unauthorized", 401));
+        }
+
+        org.springframework.data.domain.Page<com.chatBot.ChatbotAi.models.ChatLog> chatLogs =
+                chatLogService.getHistoryByChatBotId(id, page, size);
+
+        HistoryResponse historyResponse = new HistoryResponse();
+        historyResponse.setStatus(SUCCESS_CODE);
+        historyResponse.setMessage("success");
+        historyResponse.setCurrentPage(chatLogs.getNumber());
+        historyResponse.setTotalPages(chatLogs.getTotalPages());
+        historyResponse.setTotalItems(chatLogs.getTotalElements());
+
+        List<HistoryResponse.ChatHistoryItem> historyItems = chatLogs.getContent().stream().map(log -> {
+            HistoryResponse.ChatHistoryItem item = new HistoryResponse.ChatHistoryItem();
+            item.setId(log.getId());
+            item.setMessage(log.getMessage());
+            item.setResponseMessage(log.getResponseMessage());
+            item.setCreatedAt(log.getCreatedAt());
+            return item;
+        }).toList();
+
+        historyResponse.setHistory(historyItems);
+        return ResponseEntity.ok(historyResponse);
     }
 }
