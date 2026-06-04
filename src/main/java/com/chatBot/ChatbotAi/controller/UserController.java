@@ -83,7 +83,8 @@ public class UserController extends UserControllerHelper {
     public ResponseEntity<LoginResponse> googleOAuthRegister(@RequestBody @Valid OAuthRequest oAuthRequest) {
         LoginResponse loginResponse = new LoginResponse();
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                    new GsonFactory())
                     .setAudience(Collections.singletonList(googleKey))
                     .build();
             System.out.println(oAuthRequest.getToken());
@@ -121,7 +122,8 @@ public class UserController extends UserControllerHelper {
         LoginResponse loginResponse = new LoginResponse();
         try {
             System.out.println(googleKey);
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
+                    new GsonFactory())
                     .setAudience(Collections.singletonList(googleKey))
                     .build();
             System.out.println(oAuthRequest.getToken());
@@ -133,7 +135,8 @@ public class UserController extends UserControllerHelper {
                 String email = payload.getEmail();
                 Optional<User> userCheck = userService.getUserByEmailGId(email, userId);
                 if (userCheck.isEmpty()) {
-                    loginResponse = new LoginResponse(ERROR_CODE, "You have not registered or registered with password");
+                    loginResponse = new LoginResponse(ERROR_CODE,
+                            "You have not registered or registered with password");
                 } else {
                     loginResponse = new LoginResponse();
                     loginResponse.setAccessToken(this.generateAccessToken(userCheck.get()));
@@ -170,13 +173,16 @@ public class UserController extends UserControllerHelper {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest) {
         try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Response("Invalid email or password.", ERROR_CODE));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new Response("Invalid email or password.", ERROR_CODE));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("User Not Found", ERROR_CODE));
         }
-        User user = userService.findUserByEmail(loginRequest.getEmail()).orElseThrow(() -> new UsernameNotFoundException(loginRequest.getEmail()));
+        User user = userService.findUserByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException(loginRequest.getEmail()));
         return ResponseEntity.ok(new LoginResponse(this.generateAccessToken(user)));
     }
 
@@ -229,7 +235,8 @@ public class UserController extends UserControllerHelper {
     }
 
     @PostMapping("/resetPassword")
-    public ResponseEntity<Response> changePassword(@RequestBody @Valid ChangePassword changePassword, @NonNull HttpServletRequest request) {
+    public ResponseEntity<Response> changePassword(@RequestBody @Valid ChangePassword changePassword,
+            @NonNull HttpServletRequest request) {
         Response response = new LoginResponse(ERROR_CODE, "User Not Found");
         String accessToken = jwtUtils.getAuthenticationToken(request);
         String token = jwtUtils.getSessionFromJwtToken(accessToken);
@@ -266,7 +273,8 @@ public class UserController extends UserControllerHelper {
     }
 
     @PostMapping("/addChatBot")
-    public ResponseEntity<Response> addChatBot(@ModelAttribute @Valid AddChatBotRequest request, @AuthenticationPrincipal User user) throws IOException {
+    public ResponseEntity<Response> addChatBot(@ModelAttribute @Valid AddChatBotRequest request,
+            @AuthenticationPrincipal User user) throws IOException {
         MultipartFile file = request.getFile();
         if (file == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -284,7 +292,7 @@ public class UserController extends UserControllerHelper {
         } else {
             System.out.println("sucees");
             URL imageName = new URL(cloudinaryService.uploadFile(fileBytes));
-//            System.out.println(imageName);
+            // System.out.println(imageName);
             String fileName = Path.of(imageName.getPath()).getFileName().toString();
             ChatBot chatBot = chatBotService.createChat(user.getId(), request.getTitle(), request.getTopic(), fileName);
         }
@@ -306,7 +314,8 @@ public class UserController extends UserControllerHelper {
     }
 
     @GetMapping("/getApiKey/{id}")
-    public ResponseEntity<ApiKeyResponse> getApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long apiId) {
+    public ResponseEntity<ApiKeyResponse> getApiKey(@AuthenticationPrincipal User user,
+            @PathVariable("id") Long apiId) {
         Optional<ApiKey> apiKeyList = apiKeyRepository.getVisibleApikey(apiId, true);
         ApiKeyResponse response = new ApiKeyResponse();
         ApiKeyList listApiKey = new ApiKeyList();
@@ -318,7 +327,8 @@ public class UserController extends UserControllerHelper {
     }
 
     @GetMapping("/activateKey/{id}/{status}")
-    public ResponseEntity<Response> activateApiKey(@AuthenticationPrincipal User user, @PathVariable("id") Long apiKeyId, @PathVariable("status") boolean status) {
+    public ResponseEntity<Response> activateApiKey(@AuthenticationPrincipal User user,
+            @PathVariable("id") Long apiKeyId, @PathVariable("status") boolean status) {
         Response response = new Response();
         int apiUpdate = apiKeyRepository.updateApiKeyStatus(apiKeyId, status, !status);
         if (apiUpdate >= 1) {
@@ -387,8 +397,8 @@ public class UserController extends UserControllerHelper {
             return ResponseEntity.status(401).body(new Response("Unauthorized", 401));
         }
 
-        org.springframework.data.domain.Page<com.chatBot.ChatbotAi.models.ChatLog> chatLogs =
-                chatLogService.getHistoryByChatBotId(id, page, size);
+        org.springframework.data.domain.Page<com.chatBot.ChatbotAi.models.ChatLog> chatLogs = chatLogService
+                .getHistoryByChatBotId(id, page, size);
 
         HistoryResponse historyResponse = new HistoryResponse();
         historyResponse.setStatus(SUCCESS_CODE);
