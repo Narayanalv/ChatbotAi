@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: chatbot-ai-service
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon # Render's default region, can be changed
+    envVars:
+      # Tell Spring Boot to use the default configuration instead of loading application-local.properties
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      
+      # The port Render binds the web service to
+      - key: PORT
+        value: 10000
+
+      # Database Configuration (Aiven PostgreSQL)
+      - key: AIVEN_DB_PASSWORD
+        sync: false # Must be set in Render dashboard
+
+      # AI Model Integration API Keys
+      - key: GROQ_API_KEY
+        sync: false # Must be set in Render dashboard
+      - key: GOOGLE_GENAI_API_KEY
+        sync: false # Must be set in Render dashboard
+
+      # Cloudinary Integration (for images/files)
+      - key: CLOUDINARY_API_KEY
+        sync: false # Must be set in Render dashboard
+      - key: CLOUDINARY_API_SECRET
+        sync: false # Must be set in Render dashboard
+
+      # SMTP Mail Configuration
+      - key: SPRING_MAIL_PASSWORD
+        sync: false # Must be set in Render dashboard
