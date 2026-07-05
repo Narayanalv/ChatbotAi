@@ -52,7 +52,9 @@ public class SecurityConfig {
                         "/api/verifyForgot",
                         "/api/auth/google/register",
                         "/api/auth/google/login",
-                        "/test").permitAll()
+                        "/split",
+                        "/encode"
+                        ).permitAll()
                         .anyRequest()
                         .authenticated())
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)

@@ -11,10 +11,10 @@ import org.springframework.web.multipart.MultipartFile;
 @Setter
 public class AddChatBotRequest {
     @NotBlank(message = "title is required")
-    @Size(min = 3, max = 20, message = "Title must be between 3 and 20 characters")
+    @Size(min = 3, max = 100, message = "Title must be between 3 and 20 characters")
     public String title;
     @NotBlank(message = "Description is required")
-    @Size(min = 3, max = 20, message = "Description must be between 3 and 20 characters")
+    @Size(min = 3, max = 100, message = "Description must be between 3 and 20 characters")
     public String topic;
     @NotNull(message = "File is required")
     public MultipartFile file;

@@ -12,7 +12,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface RagChunkRepository extends JpaRepository<RagChunk, Integer> {
+public interface RagChunkRepository extends JpaRepository<RagChunk, Long> {
+    List<RagChunk> findByChatBotIdAndEncoded(Long chatBotId, int encoded);
+    boolean existsByChatBotIdAndEncoded(Long chatBotId, int encoded);
     @Query(value = """
             SELECT * FROM rag_chunk
             WHERE chat_bot_id = :chatBotId

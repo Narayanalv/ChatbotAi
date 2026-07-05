@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import com.chatBot.ChatbotAi.DTO.Response.Response;
 
 import javax.naming.AuthenticationException;
@@ -14,6 +15,15 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // Handles file upload size limit exceeded
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Response> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        Response response = new Response();
+        response.setStatus(400);
+        response.setMessage("File size exceeds the limit of 5MB");
+        return ResponseEntity.badRequest().body(response);
+    }
 
     // Handles Authentication Failures (Login errors)
     @ExceptionHandler(AuthenticationException.class)

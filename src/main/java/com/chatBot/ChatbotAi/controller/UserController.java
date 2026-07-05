@@ -279,6 +279,12 @@ public class UserController extends UserControllerHelper {
         if (file == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
+        if (file.getSize() > 10 * 1024 * 1024) { // 5MB Limit
+            Response response = new Response();
+            response.setStatus(ERROR_CODE);
+            response.setMessage("File size exceeds the limit of 10MB");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
         System.out.println("check");
         System.out.println("Uploading file: " + file.getOriginalFilename());
         byte[] fileBytes = file.getBytes();

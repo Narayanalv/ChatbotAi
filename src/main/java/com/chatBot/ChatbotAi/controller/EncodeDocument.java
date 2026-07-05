@@ -14,6 +14,7 @@ import javax.imageio.ImageIO;
 
 import com.chatBot.ChatbotAi.DTO.Response.Response;
 import com.chatBot.ChatbotAi.models.ChatBot;
+import com.chatBot.ChatbotAi.models.RagChunk;
 import com.chatBot.ChatbotAi.service.ChatBotService;
 import com.chatBot.ChatbotAi.service.ChatService;
 import com.chatBot.ChatbotAi.service.CloudinaryService;
@@ -24,6 +25,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,18 +44,22 @@ public class EncodeDocument {
     private final RagChunkService ragChunkService;
     private final CloudinaryService cloudinaryService;
     private final ChatService chatService;
+    private final EmbeddingModel embeddingModel;
+
     @Value("${spring.app.imageBasePath}")
     private String basePath;
 
-    @GetMapping("/test")
-    public ResponseEntity<Response> encode() throws MalformedURLException {
+    @GetMapping("/split")
+    public ResponseEntity<Response> split() throws MalformedURLException {
         Optional<ChatBot> chatBot = chatBotService.getPendingChunk(0);
-        Response response = new Response("No data", 400);
+        Response response = new Response("No pending chatbot found with status 0", 400);
         if (chatBot.isEmpty()) {
-            System.out.println("empty chatBot");
+            log.info("No chatbot in status 0 found for splitting.");
             return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
         }
         if (chatBotService.updateChatBotChunkStart(chatBot.get().getId()) > 0) {
+            log.info("Starting split process for chatbot ID: {}", chatBot.get().getId());
+            
             // --- TEXT CHUNKING (existing logic) ---
             TikaDocumentReader reader = new TikaDocumentReader(new UrlResource(basePath + chatBot.get().getDocument()));
             String chunks = new TokenTextSplitter()
@@ -108,11 +114,69 @@ public class EncodeDocument {
                 log.error("Failed to process PDF images: {}", e.getMessage(), e);
             }
 
-            if (chatBotService.updateChatBotChunkComplete(chatBot.get().getId()) > 0) {
+            response.setStatus(200);
+            response.setMessage("Splitting success. Raw chunks saved.");
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/encode")
+    public ResponseEntity<Response> encode() {
+        long startTime = System.currentTimeMillis();
+        Optional<ChatBot> chatBot = chatBotService.getPendingChunk(1);
+        Response response = new Response("No pending chatbot found with status 1", 400);
+        if (chatBot.isEmpty()) {
+            log.info("No chatbot in status 1 found for encoding.");
+            return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+        }
+
+        Long chatBotId = chatBot.get().getId();
+        log.info("Found chatbot in status 1, ID: {}", chatBotId);
+
+        List<RagChunk> pendingChunks = ragChunkService.getPendingChunks(chatBotId);
+        if (pendingChunks.isEmpty()) {
+            log.info("No chunks found with status 0 for chatbot ID: {}. Updating status to 2.", chatBotId);
+            if (chatBotService.updateChatBotChunkComplete(chatBotId) > 0) {
                 response.setStatus(200);
-                response.setMessage("Success");
+                response.setMessage("No chunks found with status 0. Chatbot marked as fully complete (status 2).");
+            }
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        log.info("Found {} pending chunks to encode for chatbot ID: {}", pendingChunks.size(), chatBotId);
+        for (RagChunk chunk : pendingChunks) {
+            if (System.currentTimeMillis() - startTime >= 30000) {
+                log.warn("Encoding timed out (reached 30 seconds limit). Ending execution early.");
+                break;
+            }
+            // Set status to 1 (in-progress)
+            ragChunkService.updateChunkStatus(chunk.getId(), 1);
+            try {
+                // Encode the text
+                float[] vector = embeddingModel.embed(chunk.getTextChunk());
+                // Save embedding and set status to 2 (completed)
+                ragChunkService.saveChunkEmbedding(chunk.getId(), vector, 2);
+                log.info("Successfully encoded and saved chunk ID: {}", chunk.getId());
+            } catch (Exception e) {
+                log.error("Failed to encode chunk ID: {}. Reverting status back to 0. Error: {}", chunk.getId(), e.getMessage());
+                // Revert status to 0 so it can be retried
+                ragChunkService.updateChunkStatus(chunk.getId(), 0);
             }
         }
+
+        // Check if there are any remaining chunks in status 0 or 1
+        if (!ragChunkService.hasPendingChunks(chatBotId)) {
+            log.info("All chunks successfully encoded for chatbot ID: {}. Updating chatbot status to 2.", chatBotId);
+            if (chatBotService.updateChatBotChunkComplete(chatBotId) > 0) {
+                response.setStatus(200);
+                response.setMessage("All chunks successfully encoded. Chatbot status updated to 2.");
+            }
+        } else {
+            log.warn("Some chunks for chatbot ID: {} failed to encode or are still in progress.", chatBotId);
+            response.setStatus(206); // Partial Content / Processing incomplete
+            response.setMessage("Encoding batch processed, but some chunks are still pending.");
+        }
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
