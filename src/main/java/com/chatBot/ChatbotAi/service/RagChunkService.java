@@ -64,7 +64,20 @@ public class RagChunkService {
     }
 
     public List<RagChunk> getPendingChunks(Long chatBotId) {
-        return ragChunkRepository.findByChatBotIdAndEncoded(chatBotId, 0);
+        return ragChunkRepository.findByChatBotIdAndEncodedAndTextChunkIsNotNull(chatBotId, 0);
+    }
+
+    public List<RagChunk> getPendingImageChunks(Long chatBotId) {
+        return ragChunkRepository.findByChatBotIdAndChunkTypeAndTextChunkIsNull(chatBotId, "IMAGE");
+    }
+
+    @Transactional
+    public void updateChunkText(Long chunkId, String text) {
+        RagChunk chunk = ragChunkRepository.findById(chunkId).orElse(null);
+        if (chunk != null) {
+            chunk.setTextChunk(text);
+            ragChunkRepository.save(chunk);
+        }
     }
 
     @Transactional

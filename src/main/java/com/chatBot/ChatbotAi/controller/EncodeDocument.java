@@ -96,13 +96,9 @@ public class EncodeDocument {
                             String imageUrl = cloudinaryService.uploadImage(imageBytes, "png");
                             log.info("Page {} uploaded to Cloudinary: {}", pageNum + 1, imageUrl);
 
-                            // Describe image using Groq vision
-                            String description = chatService.describeImage(imageUrl);
-                            log.info("Page {} described (length={})", pageNum + 1, description.length());
-
-                            // Save as IMAGE chunk
+                            // Save as IMAGE chunk (description is initially null)
                             i++;
-                            ragChunkService.saveImageChunk(description, imageUrl, i, chatBot.get().getId(), chatBot.get().getUserId());
+                            ragChunkService.saveImageChunk(null, imageUrl, i, chatBot.get().getId(), chatBot.get().getUserId());
                             log.info("Page {} saved as IMAGE chunk index {}", pageNum + 1, i);
                         } catch (Exception e) {
                             log.error("Failed to process page {}: {}", pageNum + 1, e.getMessage(), e);
@@ -177,6 +173,48 @@ public class EncodeDocument {
             response.setMessage("Encoding batch processed, but some chunks are still pending.");
         }
 
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/describe")
+    public ResponseEntity<Response> describe() {
+        long startTime = System.currentTimeMillis();
+        Optional<ChatBot> chatBot = chatBotService.getPendingChunk(1);
+        Response response = new Response("No pending chatbot found with status 1", 400);
+        if (chatBot.isEmpty()) {
+            log.info("No chatbot in status 1 found for describing.");
+            return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+        }
+
+        Long chatBotId = chatBot.get().getId();
+        log.info("Found chatbot in status 1, ID: {}, describing images...", chatBotId);
+
+        List<RagChunk> pendingImageChunks = ragChunkService.getPendingImageChunks(chatBotId);
+        if (pendingImageChunks.isEmpty()) {
+            log.info("No pending image chunks to describe for chatbot ID: {}", chatBotId);
+            response.setStatus(200);
+            response.setMessage("No image chunks to describe.");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        log.info("Found {} image chunks to describe for chatbot ID: {}", pendingImageChunks.size(), chatBotId);
+        for (RagChunk chunk : pendingImageChunks) {
+            if (System.currentTimeMillis() - startTime >= 30000) {
+                log.warn("Image description timed out (reached 30 seconds limit). Ending execution early.");
+                break;
+            }
+            try {
+                log.info("Describing image chunk ID: {}", chunk.getId());
+                String description = chatService.describeImage(chunk.getImageUrl());
+                ragChunkService.updateChunkText(chunk.getId(), description);
+                log.info("Successfully described image chunk ID: {}", chunk.getId());
+            } catch (Exception e) {
+                log.error("Failed to describe image chunk ID: {}. Error: {}", chunk.getId(), e.getMessage());
+            }
+        }
+
+        response.setStatus(200);
+        response.setMessage("Image description processing complete.");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

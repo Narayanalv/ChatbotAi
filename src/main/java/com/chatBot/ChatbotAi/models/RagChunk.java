@@ -26,7 +26,7 @@ public class RagChunk {
     private Long chatBotId;
     @Column(nullable = false)
     private Long userId;
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String textChunk;
     @Column(nullable = false)
     private Integer chunkIndex;

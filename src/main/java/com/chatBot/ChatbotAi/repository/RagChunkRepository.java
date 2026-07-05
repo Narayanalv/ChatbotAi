@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface RagChunkRepository extends JpaRepository<RagChunk, Long> {
     List<RagChunk> findByChatBotIdAndEncoded(Long chatBotId, int encoded);
+    List<RagChunk> findByChatBotIdAndEncodedAndTextChunkIsNotNull(Long chatBotId, int encoded);
+    List<RagChunk> findByChatBotIdAndChunkTypeAndTextChunkIsNull(Long chatBotId, String chunkType);
     boolean existsByChatBotIdAndEncoded(Long chatBotId, int encoded);
     @Query(value = """
             SELECT * FROM rag_chunk

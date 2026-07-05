@@ -53,6 +53,7 @@ public class SecurityConfig {
                         "/api/auth/google/register",
                         "/api/auth/google/login",
                         "/split",
+                        "/describe",
                         "/encode"
                         ).permitAll()
                         .anyRequest()
