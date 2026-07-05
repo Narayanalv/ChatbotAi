@@ -206,7 +206,7 @@ public class EncodeDocument {
             try {
                 log.info("Describing image chunk ID: {}", chunk.getId());
                 String description = chatService.describeImage(chunk.getImageUrl());
-                ragChunkService.updateChunkText(chunk.getId(), description);
+                ragChunkService.updateChunkTextAndStatus(chunk.getId(), description, 0);
                 log.info("Successfully described image chunk ID: {}", chunk.getId());
             } catch (Exception e) {
                 log.error("Failed to describe image chunk ID: {}. Error: {}", chunk.getId(), e.getMessage());

@@ -42,8 +42,8 @@ public class RagChunk {
     private String chunkType = "TEXT";
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
-    @Column(nullable = false, columnDefinition = "int default 0")
-    private int encoded = 0;
+    @Column(nullable = true)
+    private Integer encoded = null;
     private LocalDate CreatedDate = LocalDate.now();
     @CreationTimestamp
     @Column(updatable = false, nullable = false)

@@ -81,7 +81,17 @@ public class RagChunkService {
     }
 
     @Transactional
-    public void updateChunkStatus(Long chunkId, int status) {
+    public void updateChunkTextAndStatus(Long chunkId, String text, Integer status) {
+        RagChunk chunk = ragChunkRepository.findById(chunkId).orElse(null);
+        if (chunk != null) {
+            chunk.setTextChunk(text);
+            chunk.setEncoded(status);
+            ragChunkRepository.save(chunk);
+        }
+    }
+
+    @Transactional
+    public void updateChunkStatus(Long chunkId, Integer status) {
         RagChunk chunk = ragChunkRepository.findById(chunkId).orElse(null);
         if (chunk != null) {
             chunk.setEncoded(status);
@@ -90,7 +100,7 @@ public class RagChunkService {
     }
 
     @Transactional
-    public void saveChunkEmbedding(Long chunkId, float[] embedding, int status) {
+    public void saveChunkEmbedding(Long chunkId, float[] embedding, Integer status) {
         RagChunk chunk = ragChunkRepository.findById(chunkId).orElse(null);
         if (chunk != null) {
             chunk.setEmbedding(embedding);
@@ -100,7 +110,8 @@ public class RagChunkService {
     }
 
     public boolean hasPendingChunks(Long chatBotId) {
-        return ragChunkRepository.existsByChatBotIdAndEncoded(chatBotId, 0) ||
+        return ragChunkRepository.existsByChatBotIdAndEncodedIsNull(chatBotId) ||
+               ragChunkRepository.existsByChatBotIdAndEncoded(chatBotId, 0) ||
                ragChunkRepository.existsByChatBotIdAndEncoded(chatBotId, 1);
     }
 }
