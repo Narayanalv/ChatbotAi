@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 @Getter
 public class ChatDto {
-    @NotBlank(message = "title is required")
-    @Size(min = 3, max = 20, message = "Title must be between 3 and 20 characters")
+    @NotBlank(message = "Message is required")
+    @Size(min = 5, max = 5000, message = "Message must be between 1 and 5000 characters")
     private String message;
 }

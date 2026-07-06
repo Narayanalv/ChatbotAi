@@ -3,6 +3,7 @@ package com.chatBot.ChatbotAi.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -10,8 +11,6 @@ import com.chatBot.ChatbotAi.DTO.Response.Response;
 
 import javax.naming.AuthenticationException;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -48,6 +47,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.internalServerError().body(response);
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Response> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("Validation failed");
+        Response response = new Response();
+        response.setStatus(400);
+        response.setMessage(message);
+        return ResponseEntity.badRequest().body(response);
+    }
+
     @ExceptionHandler(BindException.class)
     public ResponseEntity<?> handleValidation(
             BindException ex) {
@@ -55,9 +68,10 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .getFirst()
                 .getDefaultMessage();
-        Map<String, String> error = new HashMap<>();
-        error.put("message", message);
-        return ResponseEntity.badRequest().body(error);
+        Response response = new Response();
+        response.setStatus(400);
+        response.setMessage(message);
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(IOException.class)

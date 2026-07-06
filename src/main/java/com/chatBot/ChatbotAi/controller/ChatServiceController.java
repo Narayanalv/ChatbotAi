@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import jakarta.validation.Valid;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +34,7 @@ public class ChatServiceController {
     private final ChatLogService chatLogService;
 
     @PostMapping("/")
-    public ResponseEntity<ChatResponse> getChatResponse(@RequestBody ChatDto chatDto,
+    public ResponseEntity<ChatResponse> getChatResponse(@RequestBody @Valid ChatDto chatDto,
             @AuthenticationPrincipal ChatBot chatBot) {
         List<RagChunk> ragChunks;
         StringBuilder context;
@@ -101,7 +103,7 @@ public class ChatServiceController {
     }
 
     @PostMapping("/test")
-    public ResponseEntity<ChatResponse> testChatResponse(@RequestBody ChatDto chatDto) {
+    public ResponseEntity<ChatResponse> testChatResponse(@RequestBody @Valid ChatDto chatDto) {
         String chat = chatService.chat(chatDto.getMessage());
         ChatResponse chatResponse = new ChatResponse();
         chatResponse.setMessage(chat);
@@ -111,7 +113,7 @@ public class ChatServiceController {
     }
 
     @PostMapping("/Chatbot/{chatBotId}")
-    public ResponseEntity<Response> testChat(@AuthenticationPrincipal User user, @RequestBody ChatDto chatDto,
+    public ResponseEntity<Response> testChat(@AuthenticationPrincipal User user, @RequestBody @Valid ChatDto chatDto,
             @PathVariable("chatBotId") Long id) {
         ChatResponse chatResponse = new ChatResponse();
         List<RagChunk> ragChunks;

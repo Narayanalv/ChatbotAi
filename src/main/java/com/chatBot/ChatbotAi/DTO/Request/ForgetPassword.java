@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ForgetPassword {
-    @Email
-    @NotBlank
+    @Email(message = "Please provide a valid email address")
+    @NotBlank(message = "Email is required")
     private String email;
 }
